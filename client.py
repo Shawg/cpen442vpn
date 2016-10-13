@@ -1,7 +1,9 @@
 import socket
 
 def run(TCP_IP, TCP_PORT, BUFFER_SIZE):
-    MESSAGE = "Hello, World!"
+    print "what do you want to send?"
+    MESSAGE = raw_input()
+
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((TCP_IP, TCP_PORT))
     s.send(MESSAGE)
