@@ -21,10 +21,13 @@ def main():
     print "Please specify the port to run on"
     TCP_PORT = int(raw_input())
 
+    print "Please enter your shared secret"
+    SHARED_SECRET = raw_input()
+
     if cliServ == 0:
-        server.run(TCP_IP, TCP_PORT, BUFFER_SIZE)
+        server.run(TCP_IP, TCP_PORT, BUFFER_SIZE, SHARED_SECRET)
     else:
-        client.run(TCP_IP, TCP_PORT, BUFFER_SIZE)
+        client.run(TCP_IP, TCP_PORT, BUFFER_SIZE, SHARED_SECRET)
 main()
 
 

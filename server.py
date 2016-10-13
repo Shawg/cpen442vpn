@@ -1,14 +1,17 @@
 import socket
 
-def run(TCP_IP, TCP_PORT, BUFFER_SIZE):
+def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind((TCP_IP, TCP_PORT))
+    s.bind((tcp_ip, tcp_port))
     s.listen(1)
 
     conn, addr = s.accept()
     print 'Connection address:', addr
+    data = conn.recv(buffer_size)
+    if data != verification_secret:
+        print "THEYRE HACKIN US"
     while 1:
-        data = conn.recv(BUFFER_SIZE)
+        data = conn.recv(buffer_size)
         if not data: break
         print "received data:", data
         conn.send(data)  # echo

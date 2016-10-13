@@ -1,13 +1,20 @@
 import socket
 
-def run(TCP_IP, TCP_PORT, BUFFER_SIZE):
-    print "what do you want to send?"
-    MESSAGE = raw_input()
+def run(tcp_ip, tcp_port, buffer_size, verification_secret):
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((TCP_IP, TCP_PORT))
-    s.send(MESSAGE)
-    data = s.recv(BUFFER_SIZE)
+    s.connect((tcp_ip, tcp_port))
+
+    #establish shared key
+
+    #Authenticate server
+    s.send(verification_secret)
+
+    #Send Messages
+    print "what do you want to send?"
+    message = raw_input()
+    s.send(message)
+    data = s.recv(buffer_size)
     s.close()
 
     print "received data:", data
