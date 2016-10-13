@@ -9,6 +9,11 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
 
     #Authenticate server
     s.send(verification_secret)
+    data = s.recv(buffer_size)
+    if data != verification_secret:
+        print "THEYRE HACKIN US"
+        print "abort abort abort"
+        return
 
     #Send Messages
     print "what do you want to send?"

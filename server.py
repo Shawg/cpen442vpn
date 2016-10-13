@@ -7,9 +7,18 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
 
     conn, addr = s.accept()
     print 'Connection address:', addr
+
+    #establish Shared key
+
+    #Authenticate client
     data = conn.recv(buffer_size)
     if data != verification_secret:
         print "THEYRE HACKIN US"
+        print "abort abort abort"
+        return
+    conn.send(verification_secret)
+
+    #Send Messages
     while 1:
         data = conn.recv(buffer_size)
         if not data: break
