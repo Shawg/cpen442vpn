@@ -4,11 +4,9 @@ import socket
 import server
 import client
 
-
-TCP_IP = '127.0.0.1'
-BUFFER_SIZE = 1024
-
 def main():
+    TCP_IP = '127.0.0.1'
+    BUFFER_SIZE = 1024
     cliServ = 9999
     print "Please enter 0 if this is the server and 1 if this is the client"
     while 1:
@@ -28,6 +26,7 @@ def main():
         server.run(TCP_IP, TCP_PORT, BUFFER_SIZE, SHARED_SECRET)
     else:
         client.run(TCP_IP, TCP_PORT, BUFFER_SIZE, SHARED_SECRET)
+
 main()
 
 

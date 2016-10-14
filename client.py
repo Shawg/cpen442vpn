@@ -13,13 +13,17 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     if data != verification_secret:
         print "THEYRE HACKIN US"
         print "abort abort abort"
+        s.close()
         return
 
     #Send Messages
-    print "what do you want to send?"
-    message = raw_input()
-    s.send(message)
-    data = s.recv(buffer_size)
-    s.close()
+    while 1:
+        print "what do you want to send?"
+        message = raw_input()
+        if message == "q":
+            s.send(message)
+            s.close()
+            return
+        s.send(message)
 
     print "received data:", data

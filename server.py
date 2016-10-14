@@ -15,13 +15,14 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     if data != verification_secret:
         print "THEYRE HACKIN US"
         print "abort abort abort"
+        conn.close()
         return
     conn.send(verification_secret)
 
     #Send Messages
     while 1:
         data = conn.recv(buffer_size)
-        if not data: break
+        if data == "q":
+            conn.close()
+            return
         print "received data:", data
-        conn.send(data)  # echo
-    conn.close()
