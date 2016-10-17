@@ -2,6 +2,7 @@ import socket
 from Crypto.Cipher import AES
 from Crypto.Random import random
 from Crypto.Util import number
+from time import sleep
 
 def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -19,11 +20,18 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     public_server = (shared_base ** server_secret) % shared_prime
 
     print "base "+ str(shared_base)
-    print "prime "+ str(shared_prime)
-    print "server DH secret:  "+ str(server_secret)
-
     conn.send(str(shared_base))
+    sleep(0.1)
+
+    print "prime "+ str(shared_prime)
     conn.send(str(shared_prime))
+    sleep(0.1)
+
+    print "server DH public:  "+ str(public_server)
+
+    conn.send(str(public_server))
+    sleep(0.1)
+    print "server DH secret:  "+ str(server_secret)
 
     #Authenticate client
     data = conn.recv(buffer_size)
