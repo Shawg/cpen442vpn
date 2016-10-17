@@ -10,6 +10,7 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     s.connect((tcp_ip, tcp_port))
 
     #establish shared key
+    print "Establishing a shared key"
     client_secret = random.getrandbits(16)
 
     shared_base = int(s.recv(buffer_size))

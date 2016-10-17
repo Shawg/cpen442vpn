@@ -14,11 +14,12 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
 
     #establish Shared key
     shared_base = random.getrandbits(8)
-    shared_prime = number.getPrime(16)
-    server_secret = random.getrandbits(17)
+    shared_prime = number.getPrime(64)
+    server_secret = random.getrandbits(16)
     print "generating secret..."
     public_server = (shared_base ** server_secret) % shared_prime
 
+    print "Establishing a shared key"
     print "base "+ str(shared_base)
     conn.send(str(shared_base))
     sleep(0.05)
