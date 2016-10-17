@@ -1,4 +1,7 @@
 import socket
+from Crypto.Cipher import AES
+from Crypto.Random import random
+from Crypto.Util import number
 
 def run(tcp_ip, tcp_port, buffer_size, verification_secret):
 
@@ -6,6 +9,14 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     s.connect((tcp_ip, tcp_port))
 
     #establish shared key
+    client_secret = random.getrandbits(16)
+    print "client DH secret: " + str(client_secret)
+
+    shared_base = int(s.recv(buffer_size))
+    shared_prime = int(s.recv(buffer_size))
+
+    print "base "+ str(shared_base)
+    print "prime "+ str(shared_prime)
 
     #Authenticate server
     s.send(verification_secret)
