@@ -21,17 +21,23 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
 
     print "base "+ str(shared_base)
     conn.send(str(shared_base))
-    sleep(0.1)
+    sleep(0.05)
 
     print "prime "+ str(shared_prime)
     conn.send(str(shared_prime))
-    sleep(0.1)
+    sleep(0.05)
 
     print "server DH public:  "+ str(public_server)
 
     conn.send(str(public_server))
-    sleep(0.1)
+    sleep(0.05)
+
+    public_client = int(conn.recv(buffer_size))
+    print "client DH public: " + str(public_client)
+
     print "server DH secret:  "+ str(server_secret)
+    DH_key = (public_client ** server_secret) % shared_prime
+    print "DH key: "+str(DH_key)
 
     #Authenticate client
     data = conn.recv(buffer_size)

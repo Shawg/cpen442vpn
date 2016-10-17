@@ -23,8 +23,13 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
 
     public_client = (shared_base ** client_secret) % shared_prime
     print "client DH public: " + str(public_client)
+    sleep(0.05)
+    s.send(str(public_client))
 
     print "client DH secret: " + str(client_secret)
+
+    DH_key = (public_server ** client_secret) % shared_prime
+    print "DH key: "+str(DH_key)
 
     #Authenticate server
     s.send(verification_secret)
@@ -37,7 +42,7 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
 
     #Send Messages
     while 1:
-        print "what do you want to send?"
+        print "what do you want to send? (send q to close connection)"
         message = raw_input()
         if message == "q":
             s.send(message)
