@@ -18,7 +18,7 @@ def main():
 
     print "Please specify the port to run on"
     # TCP_PORT = int(raw_input())
-    TCP_PORT = 9024
+    TCP_PORT = 9042
 
     print "Please enter your shared secret"
     # SHARED_SECRET = raw_input()
