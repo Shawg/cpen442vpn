@@ -55,10 +55,11 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     while 1:
         print "what do you want to send? (send q to close connection)"
         message = raw_input()
+        quit_message = message
         while len(message) % 16 != 0:
             message = message+'0'
         message = encryption_suite.encrypt(message)
-        if message == "q":
+        if quit_message == "q":
             s.send(message)
             s.close()
             return
