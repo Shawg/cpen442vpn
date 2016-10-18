@@ -15,6 +15,23 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     conn, addr = s.accept()
     print 'Connection address:', addr
 
+    #getting authenticated
+    client_nonce = conn.recv(buffer_size)
+    conn.send(SHA256.new(verification_secret+client_nonce).hexdigest())
+
+    #Authenticate client
+    print "Verifying the client"
+    nonce = str(random.getrandbits(128))
+    conn.send(nonce)
+    challenge = SHA256.new(verification_secret+nonce).hexdigest()
+    resp = conn.recv(buffer_size)
+
+    if resp != challenge:
+        print "THEYRE HACKIN US"
+        print "abort abort abort"
+        s.close()
+        return
+
     #establish Shared key
     shared_base = random.getrandbits(8)
     # shared_base = 7
@@ -53,16 +70,6 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
 
     #Setup AES
     encryption_suite = AES.new(DH_key.digest(), AES.MODE_ECB)
-
-    #Authenticate client
-    print "Verifying the client"
-    data = conn.recv(buffer_size)
-    if data != verification_secret:
-        print "THEYRE HACKIN US"
-        print "abort abort abort"
-        conn.close()
-        return
-    conn.send(verification_secret)
 
     #Send Messages
     while 1:

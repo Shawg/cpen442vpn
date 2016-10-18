@@ -21,8 +21,8 @@ def main():
     TCP_PORT = 9042
 
     print "Please enter your shared secret"
-    # SHARED_SECRET = raw_input()
-    SHARED_SECRET = "foo"
+    SHARED_SECRET = raw_input()
+    # SHARED_SECRET = "foo"
 
     if cliServ == 0:
         server.run(TCP_IP, TCP_PORT, BUFFER_SIZE, SHARED_SECRET)

@@ -11,6 +11,22 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((tcp_ip, tcp_port))
 
+    #Authenticate server
+    nonce = str(random.getrandbits(128))
+    s.send(nonce)
+    challenge = SHA256.new(verification_secret+nonce).hexdigest()
+    resp = s.recv(buffer_size)
+
+    if resp != challenge:
+        print "THEYRE HACKIN US"
+        print "abort abort abort"
+        s.close()
+        return
+
+    #getting authenticated
+    server_nonce = s.recv(buffer_size)
+    s.send(SHA256.new(verification_secret+server_nonce).hexdigest())
+
     #establish shared key
     print "Establishing a shared key"
     client_secret = random.getrandbits(1024)
@@ -40,16 +56,6 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
 
     # set up encryption
     encryption_suite = AES.new(DH_key.digest(), AES.MODE_ECB)
-
-    #Authenticate server
-    print "Verifying the server"
-    s.send(verification_secret)
-    data = s.recv(buffer_size)
-    if data != verification_secret:
-        print "THEYRE HACKIN US"
-        print "abort abort abort"
-        s.close()
-        return
 
     #Send Messages
     while 1:
