@@ -1,12 +1,14 @@
 import socket
+import threading
 from Crypto.Cipher import AES
 from Crypto.Random import random
 from Crypto.Util import number
 from Crypto.Hash import SHA256
-from ModularExponentiation import fastPow
 from time import sleep
 
 def run(tcp_ip, tcp_port, buffer_size, verification_secret):
+
+    exitFlag = 0
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((tcp_ip, tcp_port))
@@ -58,6 +60,10 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     encryption_suite = AES.new(DH_key.digest(), AES.MODE_ECB)
 
     #Send Messages
+    thread1 = sendThread(1, "sendThread", encryption_suite, s)
+    thread1.start()
+
+def send(name, encryption_suite, s):
     while 1:
         print "what do you want to send? (send q to close connection)"
         message = raw_input()
@@ -71,4 +77,13 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
             return
         s.send(message)
 
-    print "received data:", data
+class sendThread (threading.Thread):
+    def __init__(self, threadID, name, encryption_suite, s):
+        threading.Thread.__init__(self)
+        self.name = name
+        self.threadID = threadID
+        self.encryption_suite = encryption_suite
+        self.s = s
+    def run(self):
+        print "Starting " + self.name
+        send(self, self.encryption_suite, self.s)
