@@ -1,14 +1,15 @@
 import socket
 import threading
+import sys
 from Crypto.Cipher import AES
 from Crypto.Random import random
 from Crypto.Util import number
 from Crypto.Hash import SHA256
 from time import sleep
 
-def run(tcp_ip, tcp_port, buffer_size, verification_secret):
+exitFlag = 0
 
-    exitFlag = 0
+def run(tcp_ip, tcp_port, buffer_size, verification_secret):
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((tcp_ip, tcp_port))
@@ -59,12 +60,41 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     # set up encryption
     encryption_suite = AES.new(DH_key.digest(), AES.MODE_ECB)
 
-    #Send Messages
-    thread1 = sendThread(1, "sendThread", encryption_suite, s)
-    thread1.start()
+    # set up sending and receiving threads
+    sender = myThread(1, "sendThread", encryption_suite, s, send, buffer_size)
+    receiver = myThread(2, "recvThread", encryption_suite, s, recv, buffer_size)
+    sender.deamon = 1
+    receiver.deamon = 1
+    sender.start()
+    receiver.start()
 
-def send(name, encryption_suite, s):
-    while 1:
+    while not exitFlag:
+        pass
+        
+    s.close()
+
+def recv(name, encryption_suite, s, buffer_size):
+    global exitFlag
+    while not exitFlag:
+        data = s.recv(buffer_size)
+        original = data
+        data = encryption_suite.decrypt(data)
+        while data.endswith('0'):
+            data = data[:-1]
+        if data == "q":
+            exitFlag = 1
+            return
+        if data != "":
+            print "======================================================"
+            print "encrypted stuff: "+original
+            print "received data:", data
+            print "======================================================"
+            print "what do you want to send? (send q to close connection)"
+
+def send(name, encryption_suite, s, buffer_size):
+    global exitFlag
+    while not exitFlag:
+        print "======================================================"
         print "what do you want to send? (send q to close connection)"
         message = raw_input()
         quit_message = message
@@ -73,17 +103,22 @@ def send(name, encryption_suite, s):
         message = encryption_suite.encrypt(message)
         if quit_message == "q":
             s.send(message)
-            s.close()
+            exitFlag = 1
             return
-        s.send(message)
+        if not exitFlag:
+            s.send(message)
 
-class sendThread (threading.Thread):
-    def __init__(self, threadID, name, encryption_suite, s):
+class myThread (threading.Thread):
+    def __init__(self, threadID, name, encryption_suite, s, func, buffer_size):
         threading.Thread.__init__(self)
         self.name = name
         self.threadID = threadID
         self.encryption_suite = encryption_suite
         self.s = s
+        self.func = func
+        self.buffer_size = buffer_size
+        self.stop = threading.Event()
+        
     def run(self):
-        print "Starting " + self.name
-        send(self, self.encryption_suite, self.s)
+        #print "Starting " + self.name
+        self.func(self, self.encryption_suite, self.s, self.buffer_size)

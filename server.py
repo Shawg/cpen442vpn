@@ -1,11 +1,16 @@
 import socket
+import threading
+import sys
+import os
 from Crypto.Cipher import AES
 from Crypto.Random import random
 from Crypto.Util import number
 from Crypto.Hash import SHA256
 from Crypto import Random
-from ModularExponentiation import fastPow
+#from ModularExponentiation import fastPow
 from time import sleep
+
+exitFlag = 0
 
 def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -71,15 +76,64 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     #Setup AES
     encryption_suite = AES.new(DH_key.digest(), AES.MODE_ECB)
 
-    #Send Messages
-    while 1:
-        data = conn.recv(buffer_size)
-        print "encrypted stuff: "+data
-        print ""
+    # Set up sending and receiving threads
+    sender = myThread(1, "sendThread", encryption_suite, conn, send, buffer_size)
+    receiver = myThread(2, "recvThread", encryption_suite, conn, recv, buffer_size)
+    sender.deamon = 1
+    receiver.deamon = 1
+    sender.start()
+    receiver.start()
+
+    while not exitFlag:
+        pass
+
+    conn.close()
+    s.close()
+
+def recv(name, encryption_suite, s, buffer_size):
+    global exitFlag
+    while not exitFlag:
+        data = s.recv(buffer_size)
+        original = data
         data = encryption_suite.decrypt(data)
         while data.endswith('0'):
             data = data[:-1]
         if data == "q":
-            conn.close()
+            exitFlag = 1
             return
-        print "received data:", data
+        if data != "":
+            print "======================================================"
+            print "encrypted stuff: "+original
+            print "received data:", data
+            print "======================================================"
+            print "what do you want to send? (send q to close connection)"
+
+def send(name, encryption_suite, s, buffer_size):
+    global exitFlag
+    while not exitFlag:
+        print "======================================================"
+        print "what do you want to send? (send q to close connection)"
+        message = raw_input()
+        quit_message = message
+        while len(message) % 16 != 0:
+            message = message+'0'
+        message = encryption_suite.encrypt(message)
+        if quit_message == "q":
+            s.send(message)
+            exitFlag = 1
+            return
+        if not exitFlag:
+            s.send(message)
+
+class myThread (threading.Thread):
+    def __init__(self, threadID, name, encryption_suite, s, func, buffer_size):
+        threading.Thread.__init__(self)
+        self.name = name
+        self.threadID = threadID
+        self.encryption_suite = encryption_suite
+        self.s = s
+        self.func = func
+        self.buffer_size = buffer_size
+    def run(self):
+        #print "Starting " + self.name
+        self.func(self, self.encryption_suite, self.s, self.buffer_size)
