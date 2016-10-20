@@ -8,8 +8,13 @@ from Crypto.Hash import SHA256
 from time import sleep
 
 exitFlag = 0
+sendCounter = 0
+recvCounter = 0
 
 def run(tcp_ip, tcp_port, buffer_size, verification_secret):
+    global exitFlag
+    global sendCounter
+    global recvCounter
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((tcp_ip, tcp_port))
@@ -59,6 +64,10 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
 
     # set up encryption
     encryption_suite = AES.new(DH_key.digest(), AES.MODE_ECB)
+    recvCounter = long(s.recv(buffer_size))
+    sendCounter = long(s.recv(buffer_size))
+    print "send counter: "+str(sendCounter)
+    print "recv counter: "+str(recvCounter)
 
     # set up sending and receiving threads
     sender = myThread(1, "sendThread", encryption_suite, s, send, buffer_size)
@@ -69,43 +78,67 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     receiver.start()
 
     while not exitFlag:
-        pass
+        sleep(1)
         
     s.close()
 
 def recv(name, encryption_suite, s, buffer_size):
     global exitFlag
+    global recvCounter
+    
     while not exitFlag:
         data = s.recv(buffer_size)
         original = data
         data = encryption_suite.decrypt(data)
         while data.endswith('0'):
             data = data[:-1]
+            
+        # Check counter
+        if data != "":
+            counter = long(data.split("$$")[1])
+            data = data.split("$$")[0]
+            if counter != recvCounter:
+                print "replay attack detected"
+                print "abort abort abort"
+                exitFlag = 1
+                return            
+        
         if data == "q":
             exitFlag = 1
+            print "======================================================"
+            print "the server is off, press Enter to quit"
             return
         if data != "":
             print "======================================================"
+            print "receiving counter = "+str(recvCounter)
             print "encrypted stuff: "+original
             print "received data:", data
             print "======================================================"
             print "what do you want to send? (send q to close connection)"
+            recvCounter += 1
 
 def send(name, encryption_suite, s, buffer_size):
     global exitFlag
+    global sendCounter
+    
     while not exitFlag:
         print "======================================================"
         print "what do you want to send? (send q to close connection)"
         message = raw_input()
         quit_message = message
+        message = message + "$$" + str(sendCounter) + "$$"
         while len(message) % 16 != 0:
             message = message+'0'
         message = encryption_suite.encrypt(message)
+        
         if quit_message == "q":
             s.send(message)
             exitFlag = 1
             return
+            
         if not exitFlag:
+            print "sending counter = "+str(sendCounter)
+            sendCounter += 1
             s.send(message)
 
 class myThread (threading.Thread):
