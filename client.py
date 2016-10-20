@@ -5,6 +5,7 @@ from Crypto.Cipher import AES
 from Crypto.Random import random
 from Crypto.Util import number
 from Crypto.Hash import SHA256
+from Crypto.Hash import MD5
 from time import sleep
 
 exitFlag = 0
@@ -18,8 +19,9 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     nonce = str(random.getrandbits(128))
     s.send(nonce)
     challenge = SHA256.new(verification_secret+nonce).hexdigest()
+    print challenge
     resp = s.recv(buffer_size)
-
+    print resp
     if resp != challenge:
         print "THEYRE HACKIN US"
         print "abort abort abort"
@@ -79,15 +81,29 @@ def recv(name, encryption_suite, s, buffer_size):
         data = s.recv(buffer_size)
         original = data
         data = encryption_suite.decrypt(data)
-        while data.endswith('0'):
+        
+	#INTEGRITY CHECK
+        #take checksum from end of data and compare to
+        #generated checksum of message
+        messagehash = data[len(data)-32:len(data)]
+        data = data[0:(len(data)-32)]
+        generatedhash = MD5.new()
+        generatedhash.update(data)
+        if generatedhash.hexdigest() != messagehash:
+                print "CHECKSUM FAILED!!!!"
+ 
+
+	while data.endswith('0'):
             data = data[:-1]
         if data == "q":
             exitFlag = 1
             return
         if data != "":
             print "======================================================"
-            print "encrypted stuff: "+original
-            print "received data:", data
+            print "encrypted stuff: "+original 
+            print "generated hash: " + generatedhash.hexdigest()
+            print "message hash: " + messagehash
+	    print "received data:", data
             print "======================================================"
             print "what do you want to send? (send q to close connection)"
 
@@ -100,7 +116,15 @@ def send(name, encryption_suite, s, buffer_size):
         quit_message = message
         while len(message) % 16 != 0:
             message = message+'0'
-        message = encryption_suite.encrypt(message)
+
+        #INTEGRITY CHECK
+	#generate checksum and append to data being sent
+	messagehash = MD5.new()
+        messagehash.update(message)
+        message = message + messagehash.hexdigest()
+        print message
+	message = encryption_suite.encrypt(message)
+
         if quit_message == "q":
             s.send(message)
             exitFlag = 1

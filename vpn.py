@@ -17,8 +17,8 @@ def main():
         print "Please enter 0 if this is the server and 1 if this is the client"
 
     print "Please specify the port to run on"
-    # TCP_PORT = int(raw_input())
-    TCP_PORT = 9045
+    TCP_PORT = int(raw_input())
+    # TCP_PORT = 9045
 
     print "Please enter your shared secret"
     SHARED_SECRET = raw_input()
