@@ -1,13 +1,13 @@
 import socket
 import threading
 import sys
-import os
+import binascii
 from Crypto.Cipher import AES
 from Crypto.Random import random
 from Crypto.Util import number
 from Crypto.Hash import SHA256
 from Crypto import Random
-#from ModularExponentiation import fastPow
+from Crypto.Hash import MD5
 from time import sleep
 
 exitFlag = 0
@@ -28,7 +28,7 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     #getting authenticated
     client_nonce = conn.recv(buffer_size)
     conn.send(SHA256.new(verification_secret+client_nonce).hexdigest())
-
+    sleep(0.05)
     #Authenticate client
     print "Verifying the client"
     nonce = str(random.getrandbits(128))
@@ -109,7 +109,17 @@ def recv(name, encryption_suite, s, buffer_size):
         data = s.recv(buffer_size)
         original = data
         data = encryption_suite.decrypt(data)
-        while data.endswith('0'):
+
+        #take checksum from end of data and compare to
+	#generated checksum of message 
+	messagehash = data[len(data)-32:len(data)]
+        data = data[0:(len(data)-32)]
+	generatedhash = MD5.new()
+	generatedhash.update(data)
+	if generatedhash.hexdigest() != messagehash and data != "":
+            print "CHECKSUM FAILED!!!!"
+
+	while data.endswith('0'):
             data = data[:-1]
 
         # Check counter
@@ -129,9 +139,11 @@ def recv(name, encryption_suite, s, buffer_size):
             return
         if data != "":
             print "======================================================"
-            print "receiving counter = "+str(recvCounter)
-            print "encrypted stuff: "+original
-            print "received data:", data
+            print "receiving counter: "+str(recvCounter)
+            print "encrypted stuff: "+binascii.hexlify(original)
+            print "generated hash: " + generatedhash.hexdigest()
+	    print "message hash: " + messagehash
+	    print "received data:", data
             print "======================================================"
             print "what do you want to send? (send q to close connection)"
             recvCounter += 1
@@ -148,14 +160,20 @@ def send(name, encryption_suite, s, buffer_size):
         message = message + "$$" + str(sendCounter) + "$$"
         while len(message) % 16 != 0:
             message = message+'0'
-        message = encryption_suite.encrypt(message)
+
+        #INTEGRITY CHECK
+        #generate checksum and append to data being sent
+        messagehash = MD5.new()
+        messagehash.update(message)
+        message = message + messagehash.hexdigest()
+	message = encryption_suite.encrypt(message)
         
         if quit_message == "q":
             s.send(message)
             exitFlag = 1
             return
 
-        if not exitFlag:
+        if not exitFlag and quit_message != "":
             print "sending counter = "+str(sendCounter)
             sendCounter += 1
             s.send(message)
