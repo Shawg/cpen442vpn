@@ -33,7 +33,6 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     #Authenticate server
     nonce = str(random.getrandbits(128))
     s.send("client$$"+nonce+"$$"+IV)
-    print "sending server first message"
 
     resp = s.recv(buffer_size)
     server_nonce, encrypted, buff = resp.split('$$')
@@ -55,6 +54,11 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     while len(message) % 16 != 0:
         message = message+'0'
     s.send(message)
+
+    print "Shared prime: "+str(shared_prime)
+    print "Public server value: "+str(public_server_dh)
+    print "Public client value: "+str(public_client_dh)
+    print "Private client value: "+str(client_secret)
 
     print "Calculatin key, this may take a minute..."
     DH_key = pow(int(public_server_dh), client_secret, shared_prime)

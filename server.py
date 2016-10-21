@@ -33,14 +33,12 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
 
     #getting authenticated
     client_nonce = conn.recv(buffer_size)
-    print "receiving first message"
     name, client_nonce, IV = client_nonce.split('$$')
     if name != "client":
         print "THEYRE HACKIN US"
         print "abort abort abort"
         s.close()
         return
-    print "first mess parsed"
     auth_suite = AES.new(shared_key.digest(), AES.MODE_CBC, IV)
 
     public_server_dh = pow(shared_base, server_secret, shared_prime)
@@ -53,7 +51,6 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     while len(message) % 16 != 0:
         message = message+'0'
     conn.send(message)
-    print "sent second message"
 
     resp = conn.recv(buffer_size)
     resp = auth_suite.decrypt(resp)
@@ -64,6 +61,11 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
         print "abort abort abort"
         s.close()
         return
+
+    print "Shared prime: "+str(shared_prime)
+    print "Public server value: "+str(public_server_dh)
+    print "Public client value: "+str(public_client_dh)
+    print "Private server value: "+str(server_secret)
 
     print "Calculatin key, this may take a minute..."
     DH_key = pow(int(public_client_dh), server_secret, shared_prime)
