@@ -23,7 +23,6 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     server_secret = random.getrandbits(1024)
 
     shared_key = SHA256.new(verification_secret)
-    auth_suite = AES.new(shared_key.digest(), AES.MODE_ECB)
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((tcp_ip, tcp_port))
@@ -35,13 +34,14 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     #getting authenticated
     client_nonce = conn.recv(buffer_size)
     print "receiving first message"
-    name, client_nonce = client_nonce.split(',')
+    name, client_nonce, IV = client_nonce.split('$$')
     if name != "client":
         print "THEYRE HACKIN US"
         print "abort abort abort"
         s.close()
         return
     print "first mess parsed"
+    auth_suite = AES.new(shared_key.digest(), AES.MODE_CBC, IV)
 
     public_server_dh = pow(shared_base, server_secret, shared_prime)
     message = "server$$"+str(client_nonce)+'$$'+str(public_server_dh)+'$$'
@@ -71,7 +71,8 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     print "DH key: "+DH_key.hexdigest()
 
     #Setup AES
-    encryption_suite = AES.new(DH_key.digest(), AES.MODE_ECB)
+    IV = conn.recv(buffer_size)
+    encryption_suite = AES.new(DH_key.digest(), AES.MODE_CBC, IV)
     sendCounter = random.getrandbits(128)
     recvCounter = random.getrandbits(128)
     conn.send(str(sendCounter))

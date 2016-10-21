@@ -2,6 +2,7 @@ import socket
 import threading
 import sys
 import binascii
+from Crypto import Random
 from Crypto.Cipher import AES
 from Crypto.Random import random
 from Crypto.Util import number
@@ -21,16 +22,17 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     shared_prime = 32317006071311007300714876688669951960444102669715484032130345427524655138867890893197201411522913463688717960921898019494119559150490921095088152386448283120630877367300996091750197750389652106796057638384067568276792218642619756161838094338476170470581645852036305042887575891541065808607552399123930385521914333389668342420684974786564569494856176035326322058077805659331026192708460314150258592864177116725943603718461857357598351152301645904403697613233287231227125684710820209725157101726931323469678542580656697935045997268352998638215525166389437335543602135433594980054651204334503069401734924365973579369279
     shared_base = 147
     client_secret = random.getrandbits(1024)
+    IV = Random.new().read(16)
 
     shared_key = SHA256.new(verification_secret)
-    auth_suite = AES.new(shared_key.digest(), AES.MODE_ECB)
+    auth_suite = AES.new(shared_key.digest(), AES.MODE_CBC, IV)
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((tcp_ip, tcp_port))
 
     #Authenticate server
     nonce = str(random.getrandbits(128))
-    s.send("client,"+nonce)
+    s.send("client$$"+nonce+"$$"+IV)
     print "sending server first message"
 
     resp = s.recv(buffer_size)
@@ -60,7 +62,9 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     print "DH key: "+DH_key.hexdigest()
 
     # set up encryption
-    encryption_suite = AES.new(DH_key.digest(), AES.MODE_ECB)
+    IV = Random.new().read(16)
+    s.send(IV)
+    encryption_suite = AES.new(DH_key.digest(), AES.MODE_CBC, IV)
     recvCounter = long(s.recv(buffer_size))
     sendCounter = long(s.recv(buffer_size))
     print "send counter: "+str(sendCounter)
