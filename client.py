@@ -18,50 +18,44 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     global sendCounter
     global recvCounter
 
+    shared_prime = 32317006071311007300714876688669951960444102669715484032130345427524655138867890893197201411522913463688717960921898019494119559150490921095088152386448283120630877367300996091750197750389652106796057638384067568276792218642619756161838094338476170470581645852036305042887575891541065808607552399123930385521914333389668342420684974786564569494856176035326322058077805659331026192708460314150258592864177116725943603718461857357598351152301645904403697613233287231227125684710820209725157101726931323469678542580656697935045997268352998638215525166389437335543602135433594980054651204334503069401734924365973579369279
+    shared_base = 147
+    client_secret = random.getrandbits(1024)
+
+    shared_key = SHA256.new(verification_secret)
+    auth_suite = AES.new(shared_key.digest(), AES.MODE_ECB)
+
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((tcp_ip, tcp_port))
 
     #Authenticate server
     nonce = str(random.getrandbits(128))
-    s.send(nonce)
-    challenge = SHA256.new(verification_secret+nonce).hexdigest()
-    print challenge
+    s.send("client,"+nonce)
+    print "sending server first message"
+
     resp = s.recv(buffer_size)
-    print resp
-    if resp != challenge:
+    server_nonce, encrypted, buff = resp.split('$$')
+    encrypted = auth_suite.decrypt(encrypted)
+    name, resp_nonce, public_server_dh, buff = encrypted.split('$$')
+    if (name != "server") or (resp_nonce != nonce):
         print "THEYRE HACKIN US"
         print "abort abort abort"
         s.close()
         return
 
-    #getting authenticated
-    server_nonce = s.recv(buffer_size)
-    s.send(SHA256.new(verification_secret+server_nonce).hexdigest())
+    public_client_dh = pow(shared_base, client_secret, shared_prime)
 
-    #establish shared key
-    print "Establishing a shared key"
-    client_secret = random.getrandbits(1024)
-
-    shared_base = int(s.recv(buffer_size))
-    print "base "+ str(shared_base)
-
-    shared_prime = int(s.recv(buffer_size))
-    print "prime "+ str(shared_prime)
-
-    public_server = int(s.recv(buffer_size))
-    print "server DH public: " + str(public_server)
-
-    IV = s.recv(buffer_size)
-
-    public_client = pow(shared_base, client_secret, shared_prime)
-    print "client DH public: " + str(public_client)
-    sleep(0.05)
-    s.send(str(public_client))
-
-    print "client DH secret: " + str(client_secret)
+    message = "client$$"+server_nonce+'$$'+str(public_client_dh)+'$$'
+    while len(message) % 16 != 0:
+        message = message+'0'
+    message = auth_suite.encrypt(message)
+    message = message+'$$'
+    while len(message) % 16 != 0:
+        message = message+'0'
+    s.send(message)
 
     print "Calculatin key, this may take a minute..."
-    DH_key = pow(public_server, client_secret, shared_prime)
+    DH_key = pow(int(public_server_dh), client_secret, shared_prime)
     DH_key = SHA256.new(str(DH_key))
     print "DH key: "+DH_key.hexdigest()
 

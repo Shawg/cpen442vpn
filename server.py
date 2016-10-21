@@ -17,7 +17,14 @@ recvCounter = 0
 def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     global sendCounter
     global recvCounter
-    
+
+    shared_prime = 32317006071311007300714876688669951960444102669715484032130345427524655138867890893197201411522913463688717960921898019494119559150490921095088152386448283120630877367300996091750197750389652106796057638384067568276792218642619756161838094338476170470581645852036305042887575891541065808607552399123930385521914333389668342420684974786564569494856176035326322058077805659331026192708460314150258592864177116725943603718461857357598351152301645904403697613233287231227125684710820209725157101726931323469678542580656697935045997268352998638215525166389437335543602135433594980054651204334503069401734924365973579369279
+    shared_base = 147
+    server_secret = random.getrandbits(1024)
+
+    shared_key = SHA256.new(verification_secret)
+    auth_suite = AES.new(shared_key.digest(), AES.MODE_ECB)
+
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((tcp_ip, tcp_port))
     s.listen(1)
@@ -27,54 +34,39 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
 
     #getting authenticated
     client_nonce = conn.recv(buffer_size)
-    conn.send(SHA256.new(verification_secret+client_nonce).hexdigest())
-    sleep(0.05)
-    #Authenticate client
-    print "Verifying the client"
-    nonce = str(random.getrandbits(128))
-    conn.send(nonce)
-    challenge = SHA256.new(verification_secret+nonce).hexdigest()
-    resp = conn.recv(buffer_size)
+    print "receiving first message"
+    name, client_nonce = client_nonce.split(',')
+    if name != "client":
+        print "THEYRE HACKIN US"
+        print "abort abort abort"
+        s.close()
+        return
+    print "first mess parsed"
 
-    if resp != challenge:
+    public_server_dh = pow(shared_base, server_secret, shared_prime)
+    message = "server$$"+str(client_nonce)+'$$'+str(public_server_dh)+'$$'
+    while len(message) % 16 != 0:
+        message = message+'0'
+    message = auth_suite.encrypt(message)
+    nonce = str(random.getrandbits(128))
+    message = nonce+'$$'+message+'$$'
+    while len(message) % 16 != 0:
+        message = message+'0'
+    conn.send(message)
+    print "sent second message"
+
+    resp = conn.recv(buffer_size)
+    resp = auth_suite.decrypt(resp)
+
+    name, resp_nonce, public_client_dh, buff = resp.split('$$')
+    if (name != "client") or (resp_nonce != nonce):
         print "THEYRE HACKIN US"
         print "abort abort abort"
         s.close()
         return
 
-    #establish Shared key
-    shared_base = random.getrandbits(8)
-    # shared_base = 7
-    # shared_prime = number.getStrongPrime(2048)
-    shared_prime = 32317006071311007300714876688669951960444102669715484032130345427524655138867890893197201411522913463688717960921898019494119559150490921095088152386448283120630877367300996091750197750389652106796057638384067568276792218642619756161838094338476170470581645852036305042887575891541065808607552399123930385521914333389668342420684974786564569494856176035326322058077805659331026192708460314150258592864177116725943603718461857357598351152301645904403697613233287231227125684710820209725157101726931323469678542580656697935045997268352998638215525166389437335543602135433594980054651204334503069401734924365973579369279
-    server_secret = random.getrandbits(1024)
-    IV = Random.get_random_bytes(16)
-    print "generating secret..."
-    public_server = pow(shared_base, server_secret, shared_prime)
-
-    print "Establishing a shared key"
-    print "base "+ str(shared_base)
-    conn.send(str(shared_base))
-    sleep(0.05)
-
-    print "prime "+ str(shared_prime)
-    conn.send(str(shared_prime))
-    sleep(0.05)
-
-    print "server DH public:  "+ str(public_server)
-    conn.send(str(public_server))
-    sleep(0.05)
-
-    # print "IV: "+str(IV)
-    conn.send(str(IV))
-    sleep(0.05)
-
-    public_client = int(conn.recv(buffer_size))
-    print "client DH public: " + str(public_client)
-    print "server DH secret:  "+ str(server_secret)
-
     print "Calculatin key, this may take a minute..."
-    DH_key = pow(public_client, server_secret, shared_prime)
+    DH_key = pow(int(public_client_dh), server_secret, shared_prime)
     DH_key = SHA256.new(str(DH_key))
     print "DH key: "+DH_key.hexdigest()
 
@@ -83,6 +75,7 @@ def run(tcp_ip, tcp_port, buffer_size, verification_secret):
     sendCounter = random.getrandbits(128)
     recvCounter = random.getrandbits(128)
     conn.send(str(sendCounter))
+    sleep(0.05)
     conn.send(str(recvCounter))
     print "send counter: "+str(sendCounter)
     print "recv counter: "+str(recvCounter)
