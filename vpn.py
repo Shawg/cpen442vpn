@@ -17,7 +17,7 @@ def main():
         print "Please enter 0 if this is the server and 1 if this is the client"
 
     print "Please enter the IP address to run on, 127.0.0.1 for example"
-    TCP_IP = int(raw_input())
+    TCP_IP = raw_input()
 
     print "Please specify the port to run on"
     TCP_PORT = int(raw_input())
